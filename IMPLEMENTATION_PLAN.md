@@ -969,6 +969,17 @@ jobs:
       - name: Security scan
         run: |
           trivy image inferspect:latest
+
+# .github/workflows/claude_review.yml
+# Claude AI Reviewer
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+jobs:
+  auto_review:
+    # ... executes anthropics/claude-code-action@v1 ...
 ```
 
 #### 2. Continuous Deployment

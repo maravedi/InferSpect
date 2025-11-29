@@ -1,0 +1,52 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto_review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Claude Code Action (auto-review)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are an expert reviewer. Review the changes in this Pull Request.
+            - Focus on: bugs, security vulnerabilities, code quality, performance, and adherence to best practices.
+            - If no issues are found, leave a brief summary.
+            - Be concise and actionable.
+
+  comment_review:
+    if: >-
+      ${{ github.event_name == 'issue_comment' &&
+          contains(github.event.comment.body, '@claude') &&
+          github.event.issue.pull_request != null }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Run Claude Code Action (comment-triggered)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are reviewing a GitHub pull request based on a user request.
+            - Address the user's comment specifically if possible.
+            - Focus on security, correctness, and clarity.
+            - Only comment on files that changed in this PR unless asked otherwise.
+            - Prioritize actionable fixes and cite specific lines.
