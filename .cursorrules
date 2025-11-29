@@ -19,7 +19,7 @@ InferSpect is an LLM proxy and observability platform designed to centralize inf
 - Follow PEP 8 style guide (black, flake8, isort).
 
 ## Provider Task Mapping
-- **Gemini**: `@gemini plan` for System design and architecture.
+- **Jules**: `@jules plan` for System design and architecture.
 - **Claude**: `@claude review/fix` for Implementation and deep reasoning.
 - **Cursor**: `@cursor verify` for Test runs and final validation.
 
