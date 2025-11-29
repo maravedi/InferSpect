@@ -12,6 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
       - name: Acknowledge Jules Plan Request
         uses: actions/github-script@v7
         with:
@@ -20,12 +30,12 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Jules is generating a plan... (Simulation: This is where Jules would analyze the request)'
+              body: '🤔 Jules is analyzing your request and generating an architecture plan...\n\n*This may take 30-60 seconds. Please wait.*'
             })
 
-      - name: Run Jules Planning (Placeholder)
+      - name: Generate Jules Architecture Plan
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Jules System Design & Architecture planning triggered."
-          # In a real setup, this would call the Jules API or a script using appropriate client
-          # env:
-          #   JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+          python .github/scripts/jules_planner.py
