@@ -2,28 +2,140 @@
 """
 Jules Planning Integration Script
 
-This script integrates with Jules (Google Gemini) API to provide
+This script integrates with the official Jules API to provide
 system design and architecture planning assistance.
 """
 
 import os
 import sys
 import json
+import time
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 
 class JulesPlanner:
-    """Client for Jules (Gemini) API planning requests."""
+    """Client for Jules API planning requests."""
 
-    def __init__(self, api_key: str):
-        """Initialize Jules planner with API key."""
+    def __init__(self, api_key: str, repo_owner: str, repo_name: str):
+        """Initialize Jules planner with API key and repository info."""
         if not api_key:
             raise ValueError("JULES_API_KEY is required")
 
         self.api_key = api_key
-        # Jules uses Google Gemini API
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+        self.repo_owner = repo_owner
+        self.repo_name = repo_name
+        # Official Jules API base URL
+        self.base_url = "https://jules.googleapis.com/v1alpha"
+        self.headers = {
+            "X-Goog-Api-Key": api_key,
+            "Content-Type": "application/json"
+        }
+
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+        """Make authenticated request to Jules API."""
+        url = f"{self.base_url}/{endpoint}"
+        kwargs.setdefault('headers', {}).update(self.headers)
+        kwargs.setdefault('timeout', 60)
+
+        response = requests.request(method, url, **kwargs)
+        response.raise_for_status()
+        return response
+
+    def list_sources(self) -> List[Dict[str, Any]]:
+        """List available sources (GitHub repositories)."""
+        response = self._make_request("GET", "sources")
+        data = response.json()
+        return data.get("sources", [])
+
+    def find_source(self) -> Optional[str]:
+        """Find the source name for the current repository."""
+        sources = self.list_sources()
+
+        for source in sources:
+            github_repo = source.get("githubRepo", {})
+            if (github_repo.get("owner") == self.repo_owner and
+                github_repo.get("repo") == self.repo_name):
+                return source.get("name")
+
+        return None
+
+    def create_session(self, prompt: str, source_name: str, title: str = "Architecture Planning") -> Dict[str, Any]:
+        """Create a new Jules session."""
+        payload = {
+            "prompt": prompt,
+            "sourceContext": {
+                "source": source_name,
+                "githubRepoContext": {
+                    "startingBranch": "main"
+                }
+            },
+            "title": title,
+            "requirePlanApproval": False  # Auto-approve plans for API sessions
+        }
+
+        response = self._make_request("POST", "sessions", json=payload)
+        return response.json()
+
+    def get_session(self, session_id: str) -> Dict[str, Any]:
+        """Get session details."""
+        response = self._make_request("GET", f"sessions/{session_id}")
+        return response.json()
+
+    def list_activities(self, session_id: str, page_size: int = 50) -> List[Dict[str, Any]]:
+        """List activities in a session."""
+        response = self._make_request("GET", f"sessions/{session_id}/activities?pageSize={page_size}")
+        data = response.json()
+        return data.get("activities", [])
+
+    def wait_for_plan(self, session_id: str, max_wait: int = 120) -> Optional[str]:
+        """
+        Wait for Jules to generate a plan and extract it.
+
+        Args:
+            session_id: The session ID to monitor
+            max_wait: Maximum seconds to wait
+
+        Returns:
+            The generated plan as markdown, or None if not found
+        """
+        start_time = time.time()
+        plan_text = None
+
+        while (time.time() - start_time) < max_wait:
+            activities = self.list_activities(session_id)
+
+            # Look for plan generation activity
+            for activity in activities:
+                if "planGenerated" in activity:
+                    plan = activity["planGenerated"].get("plan", {})
+                    steps = plan.get("steps", [])
+
+                    if steps:
+                        # Format plan steps as markdown
+                        plan_lines = ["## 📋 Implementation Plan\n"]
+                        for step in steps:
+                            step_num = step.get("index", 0) + 1
+                            title = step.get("title", "")
+                            plan_lines.append(f"{step_num}. **{title}**")
+
+                        plan_text = "\n".join(plan_lines)
+
+                # Also collect progress updates and other insights
+                if "progressUpdated" in activity:
+                    progress = activity["progressUpdated"]
+                    # Could append progress updates to plan if needed
+
+                # Check if session completed
+                if "sessionCompleted" in activity:
+                    break
+
+            if plan_text:
+                break
+
+            time.sleep(5)  # Poll every 5 seconds
+
+        return plan_text
 
     def generate_plan(self, context: Dict[str, Any]) -> str:
         """
@@ -35,40 +147,84 @@ class JulesPlanner:
         Returns:
             Generated plan as markdown string
         """
-        prompt = self._build_planning_prompt(context)
-
         try:
-            response = requests.post(
-                f"{self.base_url}?key={self.api_key}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{
-                        "parts": [{
-                            "text": prompt
-                        }]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.7,
-                        "topK": 40,
-                        "topP": 0.95,
-                        "maxOutputTokens": 8192,
-                    }
-                },
-                timeout=60
-            )
+            # Find the source for this repository
+            print("🔍 Looking for repository in Jules sources...")
+            source_name = self.find_source()
 
-            response.raise_for_status()
-            result = response.json()
+            if not source_name:
+                return f"""❌ **Repository Not Found**
 
-            # Extract the generated text from Gemini response
-            if "candidates" in result and len(result["candidates"]) > 0:
-                candidate = result["candidates"][0]
-                if "content" in candidate and "parts" in candidate["content"]:
-                    parts = candidate["content"]["parts"]
-                    if len(parts) > 0 and "text" in parts[0]:
-                        return parts[0]["text"]
+The repository `{self.repo_owner}/{self.repo_name}` is not connected to Jules.
 
-            return "❌ Error: Unable to parse Jules response"
+**To fix this:**
+1. Go to [Jules web app](https://jules.google.com)
+2. Install the Jules GitHub app for this repository
+3. Once installed, try `@jules plan` again
+
+For more information, see the [Jules documentation](https://jules.google/docs)."""
+
+            print(f"✓ Found source: {source_name}")
+
+            # Build the planning prompt
+            prompt = self._build_planning_prompt(context)
+
+            # Create a session
+            print("📝 Creating Jules planning session...")
+            session_title = f"Architecture Plan: {context.get('title', 'Issue')}"
+            session = self.create_session(prompt, source_name, session_title)
+            session_id = session.get("id")
+
+            print(f"✓ Session created: {session_id}")
+
+            # Wait for the plan to be generated
+            print("⏳ Waiting for Jules to generate the plan...")
+            plan = self.wait_for_plan(session_id, max_wait=120)
+
+            if not plan:
+                # Fallback: get all activities and format them
+                print("⚠ No plan found, retrieving session activities...")
+                activities = self.list_activities(session_id)
+
+                if activities:
+                    plan_parts = ["## 📊 Jules Session Summary\n"]
+                    for activity in activities[:10]:  # Limit to first 10 activities
+                        if "progressUpdated" in activity:
+                            progress = activity["progressUpdated"]
+                            title = progress.get("title", "")
+                            description = progress.get("description", "")
+                            if title:
+                                plan_parts.append(f"- **{title}**")
+                                if description:
+                                    plan_parts.append(f"  {description}\n")
+
+                    plan = "\n".join(plan_parts) if len(plan_parts) > 1 else None
+
+            if not plan:
+                return f"""⚠️ **Planning Session Created**
+
+Jules session has been initiated but no plan was generated yet.
+
+View the session progress at: https://jules.google.com
+
+Session ID: `{session_id}`"""
+
+            return plan
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                return """❌ **Authentication Error**
+
+The `JULES_API_KEY` is invalid or has expired.
+
+**To fix this:**
+1. Go to [Jules Settings](https://jules.google.com/settings#api)
+2. Create a new API key
+3. Update the `JULES_API_KEY` secret in repository settings
+
+For more information, see the [Jules API documentation](https://developers.google.com/jules/api)."""
+            else:
+                return f"❌ Error calling Jules API: {e.response.status_code} {e.response.reason}"
 
         except requests.exceptions.RequestException as e:
             return f"❌ Error calling Jules API: {str(e)}"
@@ -85,9 +241,7 @@ class JulesPlanner:
 
         entity_type = "Pull Request" if is_pr else "Issue"
 
-        prompt = f"""You are Jules, an expert system architect and software designer.
-
-You have been asked to create a detailed architecture and implementation plan for the following request.
+        prompt = f"""Create a detailed architecture and implementation plan for the following request.
 
 **{entity_type} #{issue_number}: {issue_title}**
 
@@ -134,7 +288,7 @@ Please provide a comprehensive architecture and design plan that includes:
    - Long-term roadmap
    - Success criteria
 
-Please format your response in clear, well-structured Markdown. Use diagrams (ASCII/text-based), tables, and code examples where appropriate.
+Format your response in clear, well-structured Markdown. Use diagrams (ASCII/text-based), tables, and code examples where appropriate.
 
 Focus on practical, actionable recommendations that can guide the development team.
 """
@@ -219,15 +373,27 @@ def main():
 The `JULES_API_KEY` secret is not configured.
 
 To enable Jules planning:
-1. Go to repository Settings → Secrets and variables → Actions
-2. Add a new secret named `JULES_API_KEY`
-3. Set the value to your Google Gemini API key
+1. Go to [Jules Settings](https://jules.google.com/settings#api)
+2. Create a new API key
+3. Go to repository Settings → Secrets and variables → Actions
+4. Add a new secret named `JULES_API_KEY`
+5. Set the value to your Jules API key
 
-Get your API key at: https://makersuite.google.com/app/apikey
+For more information, see the [Jules API documentation](https://developers.google.com/jules/api).
 """
         print(error_msg)
         post_comment_to_github(error_msg)
         sys.exit(1)
+
+    # Get repository info
+    repo = os.getenv("GITHUB_REPOSITORY")
+    if not repo or "/" not in repo:
+        error_msg = "❌ Error: Could not determine repository owner and name"
+        print(error_msg)
+        post_comment_to_github(error_msg)
+        sys.exit(1)
+
+    repo_owner, repo_name = repo.split("/", 1)
 
     try:
         # Get issue/PR context
@@ -238,7 +404,7 @@ Get your API key at: https://makersuite.google.com/app/apikey
 
         # Generate plan
         print("🤔 Generating architecture plan with Jules...")
-        planner = JulesPlanner(api_key)
+        planner = JulesPlanner(api_key, repo_owner, repo_name)
         plan = planner.generate_plan(context)
 
         # Format the response
@@ -252,7 +418,7 @@ Get your API key at: https://makersuite.google.com/app/apikey
 
 ---
 
-<sub>🤖 Generated by Jules (Gemini 1.5 Pro) | Requested by @{context['author']}</sub>
+<sub>🤖 Generated by Jules AI | Requested by @{context['author']}</sub>
 """
 
         # Post to GitHub

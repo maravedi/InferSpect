@@ -34,12 +34,13 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🤔 Jules is analyzing your request and generating an architecture plan...\n\n*This may take 30-60 seconds. Please wait.*'
+              body: '🤔 Jules is analyzing your request and generating an architecture plan...\n\n*This may take 1-2 minutes. Please wait.*\n\n> **Note:** This uses the official [Jules API](https://developers.google.com/jules/api) to create a planning session.'
             })
 
       - name: Generate Jules Architecture Plan
         env:
           JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           python .github/scripts/jules_planner.py
