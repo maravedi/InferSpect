@@ -7,7 +7,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  cntents: write
   pull-requests: write
 
 jobs:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Run Claude Code Action (auto-review)
         uses: anthropics/claude-code-action@v1
@@ -24,9 +26,23 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             You are an expert reviewer. Review the changes in this Pull Request.
-            - Focus on: bugs, security vulnerabilities, code quality, performance, and adherence to best practices.
-            - If no issues are found, leave a brief summary.
-            - Be concise and actionable.
+            1. Analyze the code changes for bugs, security vulnerabilities, and code quality.
+            2. CRITICAL: Check if any documentation (README.md, IMPLEMENTATION_PLAN.md, inline docs) is outdated due to these changes.
+            3. If documentation is outdated, UPDATE the files to reflect the new changes.
+            4. Provide a summary of your review and any changes made.
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "Claude Bot"
+          git config --global user.email "claude-bot@users.noreply.github.com"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "docs: Update documentation based on Claude review"
+            # Push to the PR branch explicitly to handle detached HEAD or checkout nuances
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "No changes to commit."
+          fi
 
   comment_review:
     if: >-
@@ -37,8 +53,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Checkout PR Branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr checkout ${{ github.event.issue.number }}
 
       - name: Run Claude Code Action (comment-triggered)
         uses: anthropics/claude-code-action@v1
@@ -46,7 +66,19 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             You are reviewing a GitHub pull request based on a user request.
-            - Address the user's comment specifically if possible.
+            - Address the user's comment specifically.
+            - If the user asks for code changes or documentation updates, IMPLEMENT them.
+            - Always ensure documentation stays up-to-date with code changes.
             - Focus on security, correctness, and clarity.
-            - Only comment on files that changed in this PR unless asked otherwise.
-            - Prioritize actionable fixes and cite specific lines.
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "Claude Bot"
+          git config --global user.email "claude-bot@users.noreply.github.com"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "refactor: Claude changes based on user comment"
+            git push
+          else
+            echo "No changes to commit."
+          fi
