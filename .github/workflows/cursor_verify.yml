@@ -1,0 +1,53 @@
+name: Cursor Verify
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  cursor_verify:
+    if: contains(github.event.comment.body, '@cursor verify')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install Dependencies
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry install
+          else
+            echo "pyproject.toml not found, skipping dependency installation."
+          fi
+
+      - name: Run Tests
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry run pytest
+          else
+            echo "No tests found to run."
+          fi
+
+      - name: Report Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ job.status }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Cursor verification ${outcome}.`
+            })

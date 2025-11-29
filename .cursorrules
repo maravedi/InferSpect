@@ -1,0 +1,29 @@
+# Cursor Rules for InferSpect
+
+## Project Overview
+InferSpect is an LLM proxy and observability platform designed to centralize infrastructure for managing, monitoring, and validating LLM interactions. It uses LiteLLM, Deepchecks, Promptfoo, and Langfuse.
+
+## Tech Stack
+- **Language**: Python 3.11+
+- **Framework**: FastAPI
+- **Dependency Management**: Poetry
+- **Testing**: pytest
+- **Cloud**: Azure (AKS, PostgreSQL, Redis)
+- **Observability**: Langfuse, Deepchecks, Promptfoo
+
+## Development Guidelines
+- Follow the implementation plan in `IMPLEMENTATION_PLAN.md`.
+- Use `poetry` for dependency management.
+- Run tests using `pytest`.
+- Ensure type hints are used (mypy).
+- Follow PEP 8 style guide (black, flake8, isort).
+
+## Provider Task Mapping
+- **Gemini**: `@gemini plan` for System design and architecture.
+- **Claude**: `@claude review/fix` for Implementation and deep reasoning.
+- **Cursor**: `@cursor verify` for Test runs and final validation.
+
+## Commands
+- **Run Tests**: `poetry run pytest`
+- **Format Code**: `poetry run black .`
+- **Lint Code**: `poetry run flake8 .`
