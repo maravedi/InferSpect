@@ -44,6 +44,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Cursor Review CLI
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install cursor-review==0.1.1
+
       - name: Collect PR metadata
         id: pr_meta
         env:
@@ -76,7 +81,7 @@ jobs:
             echo "Cursor Cloud API key not configured; skipping agent invocation."
             exit 0
           fi
-          python3 scripts/cursor_cloud_review.py \
+          python3 -m cursor_cloud_review \
             --repo-url "https://github.com/${{ github.repository }}" \
             --pr-number "${{ steps.pr_meta.outputs.pr_number }}" \
             --base-ref "${{ steps.pr_meta.outputs.base_ref }}" \
