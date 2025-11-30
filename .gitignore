@@ -1,2 +1,5 @@
 # Ignore generated Claude output artifacts
 output.txt
+
+# Claude Code local settings (user-specific overrides)
+.claude/settings.local.json
