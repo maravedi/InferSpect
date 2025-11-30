@@ -37,6 +37,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          auto_approve_writes: '*'
           prompt: |
             You are the documentation-focused Claude reviewer.
             - Read the diff to understand the intent of the code changes but DO NOT modify source code, configuration, or tests.
@@ -115,6 +116,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          auto_approve_writes: '*'
           prompt: |
             You are responding as the documentation-only Claude reviewer.
             - Fulfill the user's request only if it requires documentation updates (Markdown, docs/, *.mdx).
