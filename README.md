@@ -16,8 +16,8 @@ This repository uses an AI-powered development workflow with three specialized p
 |----------|----------------|----------|
 | **Jules** | `@jules spec` | Requirements analysis, technical specifications |
 | **Jules** | `@jules plan` | System design, architecture planning |
-| **Claude** | `@claude` | Deep reasoning, code review, implementation |
-| **Cursor** | `@cursor verify` | Test runs, final validation |
+| **Claude** | `@claude` | Documentation audits & updates |
+| **Cursor** | `@cursor verify` | Bug fixes, security review, verification |
 
 ### How It Works
 
@@ -29,15 +29,15 @@ This repository uses an AI-powered development workflow with three specialized p
   - **Requires `JULES_API_KEY` secret** - See [setup guide](#jules-api-key-setup)
   - Powered by [jules-specs](https://pypi.org/project/jules-specs/) and [jules-planner](https://pypi.org/project/jules-planner/) packages
 
-- **Claude (Review & Implementation)**:
+- **Claude (Documentation Refresh)**:
   - **Auto-Review:** All Pull Requests are automatically reviewed by Claude upon opening or synchronization
-  - **On-Demand:** Comment `@claude` in your Pull Request to request specific reviews or ask questions
-  - Claude can analyze code, suggest improvements, and commit documentation updates
+  - **On-Demand:** Comment `@claude` in your Pull Request to request specific documentation updates
+  - Claude keeps Markdown and planning docs current while flagging any issues for Cursor to address
 
-- **Cursor (Verification)**: Comment `@cursor verify` on a PR to:
-  - Run the full test suite with pytest
-  - Validate code changes
-  - Report test results back to the PR
+- **Cursor (Fix & Verify)**: Comment `@cursor verify` on a PR to:
+  - Run the Cursor fix workflow that applies bug fixes and security hardening
+  - Execute `poetry run pytest` plus Bandit for verification
+  - Commit/push the resulting changes and report the status back to the PR
 
 ## Jules API Key Setup
 

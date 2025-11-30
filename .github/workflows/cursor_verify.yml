@@ -1,18 +1,52 @@
-name: Cursor Verify
+name: Cursor Fix & Verify
 
 on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 jobs:
-  cursor_verify:
-    if: contains(github.event.comment.body, '@cursor verify')
+  cursor_fix:
+    if: >-
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@cursor verify')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR Branch
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Checkout PR Branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr checkout ${{ github.event.issue.number }}
+
+      - name: Configure Git Credentials
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "Cursor Bot"
+          git config --global user.email "cursor-bot@users.noreply.github.com"
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Run Cursor Code Action
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are Cursor, the implementation-focused reviewer for this repository.
+            - Inspect the pull request for bugs, regressions, or security vulnerabilities.
+            - Implement safe, minimal fixes directly in the codebase where appropriate.
+            - Prioritize security hardening, correctness, and maintainability.
+            - Leave concise comments summarizing critical findings and rationale for changes.
+            - Do not modify Markdown documentation unless it directly supports a code fix (documentation updates belong to Claude).
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,6 +56,7 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
       - name: Install Dependencies
         run: |
@@ -31,6 +66,10 @@ jobs:
             echo "pyproject.toml not found, skipping dependency installation."
           fi
 
+      - name: Install Security Tooling
+        run: |
+          python -m pip install --upgrade pip bandit
+
       - name: Run Tests
         run: |
           if [ -f "pyproject.toml" ]; then
@@ -39,15 +78,36 @@ jobs:
             echo "No tests found to run."
           fi
 
+      - name: Run Security Scan
+        run: |
+          bandit -r . || (echo "Bandit found issues. Please review the workflow logs." && exit 1)
+
+      - name: Commit and Push Cursor Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "Cursor Bot"
+          git config --global user.email "cursor-bot@users.noreply.github.com"
+          git add .
+          if ! git diff --staged --quiet; then
+            git commit -m "fix: cursor security review updates"
+            git push
+          else
+            echo "No code changes detected."
+          fi
+
       - name: Report Status
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
             const outcome = '${{ job.status }}';
+            const summary = outcome === 'success'
+              ? 'Cursor applied fixes, ran tests, and completed the security review.'
+              : 'Cursor encountered an issue while applying fixes or running checks. Inspect the workflow logs for details.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Cursor verification ${outcome}.`
+              body: `Cursor verification ${outcome}.\n\n${summary}`
             })

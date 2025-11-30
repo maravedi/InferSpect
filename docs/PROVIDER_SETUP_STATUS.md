@@ -10,8 +10,8 @@ This document tracks the implementation status of the provider task mapping work
 |----------|--------|---------|----------------|-----------------|-------|
 | **Jules** | ✅ Fully Functional | `@jules spec` | Complete | ✅ Configured | Spec generation via jules-specs |
 | **Jules** | ✅ Fully Functional | `@jules plan` | Complete | ✅ Configured | Planning via jules-planner |
-| **Claude** | ✅ Fully Functional | `@claude` | Complete | ✅ Configured | Auto-review + on-demand |
-| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | N/A (local tests) | Runs pytest suite |
+| **Claude** | ✅ Fully Functional | `@claude` | Complete | ✅ Configured | Docs-only auto-review |
+| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | ✅ Shared (Anthropic) | Bug fixes + tests + Bandit |
 
 ---
 
@@ -66,7 +66,7 @@ This document tracks the implementation status of the provider task mapping work
 
 ---
 
-### 2. Claude (Code Review & Implementation) - ✅ FULLY FUNCTIONAL
+### 2. Claude (Documentation Refresh) - ✅ FULLY FUNCTIONAL
 
 **Workflow File:** `.github/workflows/claude_review.yml`
 
@@ -76,26 +76,22 @@ This document tracks the implementation status of the provider task mapping work
 - ✅ Auto-review on PR open/sync/reopen
 - ✅ On-demand review via `@claude` comment
 - ✅ Uses official `anthropics/claude-code-action@v1`
-- ✅ Reviews code for bugs, security, quality
-- ✅ Updates documentation automatically
-- ✅ Commits and pushes changes
+- ✅ Updates Markdown/`docs/` content automatically
+- ✅ Leaves review comments pointing developers to `@cursor verify` for code fixes
+- ✅ Commits and pushes documentation changes only
 - ✅ Handles both PR and comment triggers
 
 **API Integration:**
 - ✅ `ANTHROPIC_API_KEY` secret configured
 - ✅ Official Claude Code Action integration
 
-**Recent Fixes:**
-- ✅ Fixed permissions typo (`cntents` → `contents`)
-
-**Trigger Flexibility:**
-- Current trigger: `@claude` (any mention)
-- Spec suggests: `@claude review/fix`
-- **Note:** Current implementation is more flexible and works well
+**Notes:**
+- Claude now operates in documentation-only mode
+- Bug fixes and security remediations are intentionally deferred to Cursor
 
 ---
 
-### 3. Cursor (Test Validation) - ✅ FULLY FUNCTIONAL
+### 3. Cursor (Fix & Verify) - ✅ FULLY FUNCTIONAL
 
 **Workflow File:** `.github/workflows/cursor_verify.yml`
 
@@ -103,17 +99,18 @@ This document tracks the implementation status of the provider task mapping work
 
 **What Works:**
 - ✅ Triggers on `@cursor verify` comment
+- ✅ Checks out PR branch with write permissions
+- ✅ Runs Cursor AI action for bug fixes & security hardening
 - ✅ Sets up Python 3.11 environment
-- ✅ Installs Poetry dependency manager
-- ✅ Installs project dependencies
+- ✅ Installs Poetry dependency manager and project deps
 - ✅ Runs pytest test suite
+- ✅ Runs Bandit security scan
+- ✅ Commits and pushes Cursor changes
 - ✅ Reports results back to PR
 - ✅ Handles missing pyproject.toml gracefully
 
-**No API Integration Needed:**
-- Cursor verification runs local tests
-- No external API required
-- Uses GitHub Actions environment
+**API Integration:**
+- ✅ Reuses `ANTHROPIC_API_KEY` for the Cursor AI action
 
 ---
 
@@ -122,7 +119,7 @@ This document tracks the implementation status of the provider task mapping work
 ### Issue Comments (Work on Both Issues & PRs)
 - `@jules spec` - Triggers Jules spec generation workflow
 - `@jules plan` - Triggers Jules planning workflow
-- `@cursor verify` - Triggers Cursor test verification (PR only)
+- `@cursor verify` - Triggers Cursor fix, security review, and verification (PR only)
 
 ### PR Comments
 - `@claude` - Triggers Claude review workflow
@@ -141,7 +138,7 @@ This document tracks the implementation status of the provider task mapping work
 | Secret | Status | Used By | Purpose |
 |--------|--------|---------|---------|
 | `JULES_API_KEY` | ❌ Not Set | Jules workflow | Jules AI API authentication |
-| `ANTHROPIC_API_KEY` | ✅ Set | Claude workflow | Claude AI API authentication |
+| `ANTHROPIC_API_KEY` | ✅ Set | Claude & Cursor workflows | Anthropic API authentication |
 | `GITHUB_TOKEN` | ✅ Auto-provided | All workflows | GitHub API access |
 
 ---
@@ -150,8 +147,8 @@ This document tracks the implementation status of the provider task mapping work
 
 ### ✅ What's Working
 1. **Jules Planning Workflow** - ✅ Fully operational with Gemini API
-2. **Claude Review Workflow** - ✅ Fully operational
-3. **Cursor Verify Workflow** - ✅ Fully operational
+2. **Claude Documentation Workflow** - ✅ Fully operational (docs-only)
+3. **Cursor Fix & Verify Workflow** - ✅ Fully operational
 4. **All workflow files** exist and are properly configured
 5. **Documentation** updated in README.md with setup guide
 6. **Trigger mechanisms** correctly configured for all providers
@@ -174,15 +171,15 @@ All three provider workflows are now fully implemented:
 - Error handling and user feedback
 - Requires API key configuration
 
-**✅ Claude** - Code review and implementation
+**✅ Claude** - Documentation refresh
 - Official Anthropic action integration
 - Auto-review and on-demand modes
-- Can commit documentation updates
+- Commits Markdown/`docs/` updates only
 
-**✅ Cursor** - Test verification
-- Pytest integration
-- Dependency management
-- Result reporting
+**✅ Cursor** - Fix & verification
+- Claude escalations resolved via Cursor AI action
+- Pytest + Bandit automation
+- Commits and reports implementation changes
 
 ---
 
@@ -196,8 +193,8 @@ All three provider workflows are now fully implemented:
 
 2. **Test Cursor Workflow:**
    - Comment `@cursor verify` on a test PR
-   - Verify pytest runs
-   - Verify results are posted back
+   - Verify Cursor applies fixes/security changes as needed
+   - Confirm pytest and Bandit run successfully and that results are posted back
 
 3. **Test Jules Workflow:**
    - Comment `@jules spec` on a test issue to generate specifications
