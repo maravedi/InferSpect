@@ -82,6 +82,42 @@ jobs:
         run: |
           bandit -r . || (echo "Bandit found issues. Please review the workflow logs." && exit 1)
 
+      - name: Detect Code Changes Requiring Docs
+        id: code_changes
+        run: |
+          set -euo pipefail
+          CHANGED_CODE="$(git status --porcelain | awk '{print $2}' | grep -Ev '(\.md$|\.mdx$|\.rst$|^docs/)' || true)"
+          if [ -z "$CHANGED_CODE" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "$CHANGED_CODE" > code_changes.txt
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "paths<<EOF"
+            cat code_changes.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Cursor Documentation Sweep
+        if: steps.code_changes.outputs.has_changes == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are Cursor performing a documentation sweep after code changes.
+            The following non-documentation paths were modified:
+
+            ${{ steps.code_changes.outputs.paths }}
+
+            Requirements:
+            - Update only Markdown, reStructuredText, or files under docs/.
+            - Keep the updates tightly scoped to the behaviors/interfaces touched above.
+            - Summarize new security considerations introduced by the code changes when relevant.
+            - Never edit application source files in this step.
+
       - name: Commit and Push Cursor Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

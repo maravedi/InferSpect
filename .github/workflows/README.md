@@ -91,6 +91,7 @@ Responds to `@cursor verify` comments by having Cursor apply implementation fixe
 - **Implementation Ownership**: Cursor applies bug fixes and security hardening directly to the PR branch
 - **Security Review**: Executes Bandit after AI modifications to catch common vulnerabilities
 - **Test Verification**: Runs `poetry run pytest` to validate the updated code
+- **Scoped Doc Sweep**: If code files change, Cursor performs a constrained documentation update for the affected areas
 - **Automated Commits & Reporting**: Pushes Cursor changes and posts an execution summary back to the PR
 
 ### How to Use
@@ -108,8 +109,9 @@ The workflow:
 3. Installs Poetry plus project dependencies
 4. Executes pytest
 5. Scans the repository with Bandit
-6. Commits/pushes resulting code changes
-7. Posts a status comment summarizing the outcome
+6. Detects whether non-documentation files were changed and, if so, runs a docs-only sweep scoped to those paths
+7. Commits/pushes resulting code and documentation changes
+8. Posts a status comment summarizing the outcome
 
 ### Setup Instructions
 

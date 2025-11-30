@@ -105,6 +105,7 @@ This document tracks the implementation status of the provider task mapping work
 - ✅ Installs Poetry dependency manager and project deps
 - ✅ Runs pytest test suite
 - ✅ Runs Bandit security scan
+- ✅ Automatically triggers a scoped documentation sweep if non-doc files changed
 - ✅ Commits and pushes Cursor changes
 - ✅ Reports results back to PR
 - ✅ Handles missing pyproject.toml gracefully

@@ -37,6 +37,7 @@ This repository uses an AI-powered development workflow with three specialized p
 - **Cursor (Fix & Verify)**: Comment `@cursor verify` on a PR to:
   - Run the Cursor fix workflow that applies bug fixes and security hardening
   - Execute `poetry run pytest` plus Bandit for verification
+  - Automatically trigger a scoped documentation sweep if code files changed
   - Commit/push the resulting changes and report the status back to the PR
 
 ## Jules API Key Setup
