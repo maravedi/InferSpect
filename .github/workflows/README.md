@@ -20,7 +20,8 @@ This workflow uses Anthropic's Claude AI to automatically review pull requests f
 
 ### Features
 
-- **Automatic PR Documentation Pass**: Runs when PRs are opened, updated, reopened, or marked ready
+- **Automatic PR Documentation Pass**: Runs when non-draft PRs are opened, updated, reopened, or marked ready for review
+- **Draft PR Handling**: Automatic reviews are skipped for draft PRs to avoid premature feedback
 - **Docs-Only Commits**: Updates Markdown and `docs/` files without touching application code
 - **Bug/Security Escalation**: Leaves review comments directing maintainers to run `@cursor verify` for implementation fixes
 - **On-Demand Doc Refresh**: Comment `@claude` on any PR to request targeted documentation updates
@@ -30,10 +31,12 @@ This workflow uses Anthropic's Claude AI to automatically review pull requests f
 #### Automatic Review
 
 The workflow automatically runs when you:
-- Open a new pull request
-- Push new commits to an existing PR
-- Reopen a PR
+- Open a new pull request (non-draft only)
+- Push new commits to an existing non-draft PR
+- Reopen a non-draft PR
 - Mark a draft PR as ready for review
+
+**Note:** Draft PRs are intentionally excluded from automatic reviews. Convert your draft to a ready-for-review PR to trigger Claude's documentation pass.
 
 #### Comment-Triggered Review
 
@@ -297,6 +300,13 @@ This allows Jules to generate comprehensive outputs and even create pull request
 - Store all API keys in GitHub repository secrets
 - Rotate API keys regularly
 - Google and Anthropic automatically disable publicly exposed API keys
+
+### Preventing Workflow Artifacts from Being Committed
+
+The repository includes a `.gitignore` file that prevents Claude Code output artifacts from being accidentally committed:
+- `output.txt` - Claude's session output and logging data
+
+If you notice Claude-generated temporary files in your working directory, add them to `.gitignore` to keep your repository clean.
 
 ### Workflow Permissions
 All workflows run with minimal required permissions:
