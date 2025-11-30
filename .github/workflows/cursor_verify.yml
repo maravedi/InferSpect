@@ -1,6 +1,8 @@
 name: Cursor Fix & Verify
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   issue_comment:
     types: [created]
 
@@ -12,8 +14,11 @@ permissions:
 jobs:
   cursor_fix:
     if: >-
-      github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '@cursor verify')
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.draft == false) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       contains(github.event.comment.body, '@cursor verify'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,7 +30,14 @@ jobs:
       - name: Checkout PR Branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr checkout ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER="${{ github.event.issue.number }}"
+          fi
+          gh pr checkout "$PR_NUMBER"
 
       - name: Configure Git Credentials
         env:
