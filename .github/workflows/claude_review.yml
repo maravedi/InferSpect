@@ -2,7 +2,7 @@ name: Claude PR Review
 
 on:
   workflow_run:
-    workflows: ["Cursor Fix & Verify"]
+    workflows: ["Cursor Verify"]
     types: [completed]
   issue_comment:
     types: [created]

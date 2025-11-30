@@ -1,4 +1,4 @@
-name: Cursor Fix & Verify
+name: Cursor Verify
 
 on:
   pull_request:
@@ -7,12 +7,12 @@ on:
     types: [created]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
-  id-token: write
+  issues: write
 
 jobs:
-  cursor_fix:
+  cursor_verify:
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.draft == false) ||
@@ -39,31 +39,100 @@ jobs:
           fi
           gh pr checkout "$PR_NUMBER"
 
-      - name: Configure Git Credentials
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "Cursor Bot"
-          git config --global user.email "cursor-bot@users.noreply.github.com"
-          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-
-      - name: Run Cursor Code Action
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            You are Cursor, the implementation-focused reviewer for this repository.
-            - Inspect the pull request for bugs, regressions, or security vulnerabilities.
-            - Implement safe, minimal fixes directly in the codebase where appropriate.
-            - Prioritize security hardening, correctness, and maintainability.
-            - Leave concise comments summarizing critical findings and rationale for changes.
-            - Do not modify Markdown documentation unless it directly supports a code fix (documentation updates belong to Claude).
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Collect PR metadata
+        id: pr_meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "pr_number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "base_ref=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_ref=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            PR_NUMBER="${{ github.event.issue.number }}"
+            META_JSON="$(gh pr view "$PR_NUMBER" --json number,baseRefName,baseRefOid,headRefName,headRefOid)"
+            echo "pr_number=$(echo "$META_JSON" | jq -r '.number')" >> "$GITHUB_OUTPUT"
+            echo "base_ref=$(echo "$META_JSON" | jq -r '.baseRefName')" >> "$GITHUB_OUTPUT"
+            echo "base_sha=$(echo "$META_JSON" | jq -r '.baseRefOid')" >> "$GITHUB_OUTPUT"
+            echo "head_ref=$(echo "$META_JSON" | jq -r '.headRefName')" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(echo "$META_JSON" | jq -r '.headRefOid')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Cursor Cloud Agent Review
+        env:
+          CURSOR_CLOUD_API_KEY: ${{ secrets.CURSOR_CLOUD_API_KEY }}
+          CURSOR_CLOUD_BASE_URL: ${{ secrets.CURSOR_CLOUD_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CURSOR_CLOUD_API_KEY:-}" ]; then
+            echo "Cursor Cloud API key not configured; skipping agent invocation."
+            exit 0
+          fi
+          python3 scripts/cursor_cloud_review.py \
+            --repo-url "https://github.com/${{ github.repository }}" \
+            --pr-number "${{ steps.pr_meta.outputs.pr_number }}" \
+            --base-ref "${{ steps.pr_meta.outputs.base_ref }}" \
+            --base-sha "${{ steps.pr_meta.outputs.base_sha }}" \
+            --head-ref "${{ steps.pr_meta.outputs.head_ref }}" \
+            --head-sha "${{ steps.pr_meta.outputs.head_sha }}" \
+            --analysis-report cursor-cloud-analysis.md \
+            --metadata-out cursor-cloud-analysis.json
+
+      - name: Parse Cursor Agent Output
+        id: cursor_agent
+        run: |
+          set -euo pipefail
+          if [ ! -f cursor-cloud-analysis.json ]; then
+            echo "report_path=" >> "$GITHUB_OUTPUT"
+            echo "agent_status=" >> "$GITHUB_OUTPUT"
+            echo "agent_pr_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          REPORT_PATH="$(jq -r '.report_path // empty' cursor-cloud-analysis.json)"
+          STATUS="$(jq -r '.status // empty' cursor-cloud-analysis.json)"
+          PR_URL="$(jq -r '.pr_url // empty' cursor-cloud-analysis.json)"
+          echo "report_path=$REPORT_PATH" >> "$GITHUB_OUTPUT"
+          echo "agent_status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "agent_pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Post Cursor Agent Findings
+        if: steps.cursor_agent.outputs.report_path != ''
+        uses: actions/github-script@v7
+        env:
+          REPORT_PATH: ${{ steps.cursor_agent.outputs.report_path }}
+          AGENT_STATUS: ${{ steps.cursor_agent.outputs.agent_status }}
+          AGENT_PR_URL: ${{ steps.cursor_agent.outputs.agent_pr_url }}
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
+            const prNumber = parseInt('${{ steps.pr_meta.outputs.pr_number }}', 10);
+            const statusLine = process.env.AGENT_STATUS ? `\n_Status: ${process.env.AGENT_STATUS}_\n` : '';
+            const prLink = process.env.AGENT_PR_URL ? `\nCursor-created PR: ${process.env.AGENT_PR_URL}\n` : '';
+            const finalBody = `${statusLine}${prLink}\n${body}`;
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: finalBody.slice(0, 60000)
+            });
+
+      - name: Upload Cursor Agent Report
+        if: steps.cursor_agent.outputs.report_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: cursor-agent-review-${{ steps.pr_meta.outputs.pr_number }}
+          path: |
+            cursor-cloud-analysis.md
+            cursor-cloud-analysis.json
 
       - name: Install Poetry
         run: |
@@ -94,56 +163,6 @@ jobs:
         run: |
           bandit -r . || (echo "Bandit found issues. Please review the workflow logs." && exit 1)
 
-      - name: Detect Code Changes Requiring Docs
-        id: code_changes
-        run: |
-          set -euo pipefail
-          CHANGED_CODE="$(git status --porcelain | awk '{print $2}' | grep -Ev '(\.md$|\.mdx$|\.rst$|^docs/)' || true)"
-          if [ -z "$CHANGED_CODE" ]; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "$CHANGED_CODE" > code_changes.txt
-          echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          {
-            echo "paths<<EOF"
-            cat code_changes.txt
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Cursor Documentation Sweep
-        if: steps.code_changes.outputs.has_changes == 'true'
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            You are Cursor performing a documentation sweep after code changes.
-            The following non-documentation paths were modified:
-
-            ${{ steps.code_changes.outputs.paths }}
-
-            Requirements:
-            - Update only Markdown, reStructuredText, or files under docs/.
-            - Keep the updates tightly scoped to the behaviors/interfaces touched above.
-            - Summarize new security considerations introduced by the code changes when relevant.
-            - Never edit application source files in this step.
-
-      - name: Commit and Push Cursor Changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "Cursor Bot"
-          git config --global user.email "cursor-bot@users.noreply.github.com"
-          git add .
-          if ! git diff --staged --quiet; then
-            git commit -m "fix: cursor security review updates"
-            git push
-          else
-            echo "No code changes detected."
-          fi
-
       - name: Report Status
         if: always()
         uses: actions/github-script@v7
@@ -151,8 +170,8 @@ jobs:
           script: |
             const outcome = '${{ job.status }}';
             const summary = outcome === 'success'
-              ? 'Cursor applied fixes, ran tests, and completed the security review.'
-              : 'Cursor encountered an issue while applying fixes or running checks. Inspect the workflow logs for details.';
+              ? 'Cursor ran pytest and Bandit with no failures detected.'
+              : 'Cursor verification encountered a failing step (tests, dependency install, or Bandit). Inspect the workflow logs for details.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
