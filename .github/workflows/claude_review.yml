@@ -36,6 +36,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             You are an expert reviewer. Review the changes in this Pull Request.
             1. Analyze the code changes for bugs, security vulnerabilities, and code quality.
@@ -94,6 +95,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             You are reviewing a GitHub pull request based on a user request.
             - Address the user's comment specifically.
