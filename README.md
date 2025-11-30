@@ -17,7 +17,7 @@ This repository uses an AI-powered development workflow with three specialized p
 | **Jules** | `@jules spec` | Requirements analysis, technical specifications |
 | **Jules** | `@jules plan` | System design, architecture planning |
 | **Claude** | `@claude` | Documentation audits & updates |
-| **Cursor** | `@cursor verify` | Bug fixes, security review, verification |
+| **Cursor** | `@cursor verify` | Automated tests & security verification |
 
 ### How It Works
 
@@ -35,11 +35,10 @@ This repository uses an AI-powered development workflow with three specialized p
   - Claude keeps Markdown and planning docs current while flagging any issues for Cursor to address
   - **Note:** Draft PRs are excluded from automatic reviews to avoid premature feedback
 
-- **Cursor (Fix & Verify)**: Comment `@cursor verify` on a PR to:
-  - Run the Cursor fix workflow that applies bug fixes and security hardening
-  - Execute `poetry run pytest` plus Bandit for verification
-  - Automatically trigger a scoped documentation sweep if code files changed
-  - Commit/push the resulting changes and report the status back to the PR
+- **Cursor (Verify)**: Comment `@cursor verify` on a PR to:
+  - Run the automated verification pipeline (`poetry run pytest` plus Bandit)
+  - Surface failures in the workflow logs and summary comment without modifying code
+  - Keep maintainers informed about the latest verification status directly on the PR
 
 ## Jules API Key Setup
 

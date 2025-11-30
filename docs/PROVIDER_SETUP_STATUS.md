@@ -11,7 +11,7 @@ This document tracks the implementation status of the provider task mapping work
 | **Jules** | ✅ Fully Functional | `@jules spec` | Complete | ✅ Configured | Spec generation via jules-specs |
 | **Jules** | ✅ Fully Functional | `@jules plan` | Complete | ✅ Configured | Planning via jules-planner |
 | **Claude** | ✅ Fully Functional | `@claude` | Complete | ✅ Configured | Docs-only auto-review |
-| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | ✅ Shared (Anthropic) | Bug fixes + tests + Bandit |
+| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | N/A (local pipeline) | Tests + Bandit verification |
 
 ---
 
@@ -88,11 +88,11 @@ This document tracks the implementation status of the provider task mapping work
 
 **Notes:**
 - Claude now operates in documentation-only mode
-- Bug fixes and security remediations are intentionally deferred to Cursor
+- Bug fixes and security remediations remain manual; Cursor now focuses on verification-only runs
 
 ---
 
-### 3. Cursor (Fix & Verify) - ✅ FULLY FUNCTIONAL
+### 3. Cursor (Verify) - ✅ FULLY FUNCTIONAL
 
 **Workflow File:** `.github/workflows/cursor_verify.yml`
 
@@ -101,18 +101,15 @@ This document tracks the implementation status of the provider task mapping work
 **What Works:**
 - ✅ Triggers on `@cursor verify` comment
 - ✅ Checks out PR branch with write permissions
-- ✅ Runs Cursor AI action for bug fixes & security hardening
 - ✅ Sets up Python 3.11 environment
 - ✅ Installs Poetry dependency manager and project deps
 - ✅ Runs pytest test suite
 - ✅ Runs Bandit security scan
-- ✅ Automatically triggers a scoped documentation sweep if non-doc files changed
-- ✅ Commits and pushes Cursor changes
-- ✅ Reports results back to PR
+- ✅ Posts verification results back to the PR
 - ✅ Handles missing pyproject.toml gracefully
 
 **API Integration:**
-- ✅ Reuses `ANTHROPIC_API_KEY` for the Cursor AI action
+- ✅ Not required (local GitHub Actions pipeline only)
 
 ---
 
@@ -121,7 +118,7 @@ This document tracks the implementation status of the provider task mapping work
 ### Issue Comments (Work on Both Issues & PRs)
 - `@jules spec` - Triggers Jules spec generation workflow
 - `@jules plan` - Triggers Jules planning workflow
-- `@cursor verify` - Triggers Cursor fix, security review, and verification (PR only)
+- `@cursor verify` - Triggers Cursor verification pipeline (PR only)
 
 ### PR Comments
 - `@claude` - Triggers Claude review workflow
@@ -140,7 +137,7 @@ This document tracks the implementation status of the provider task mapping work
 | Secret | Status | Used By | Purpose |
 |--------|--------|---------|---------|
 | `JULES_API_KEY` | ❌ Not Set | Jules workflow | Jules AI API authentication |
-| `ANTHROPIC_API_KEY` | ✅ Set | Claude & Cursor workflows | Anthropic API authentication |
+| `ANTHROPIC_API_KEY` | ✅ Set | Claude workflow | Anthropic API authentication |
 | `GITHUB_TOKEN` | ✅ Auto-provided | All workflows | GitHub API access |
 
 ---
@@ -150,7 +147,7 @@ This document tracks the implementation status of the provider task mapping work
 ### ✅ What's Working
 1. **Jules Planning Workflow** - ✅ Fully operational with Gemini API
 2. **Claude Documentation Workflow** - ✅ Fully operational (docs-only)
-3. **Cursor Fix & Verify Workflow** - ✅ Fully operational
+3. **Cursor Verify Workflow** - ✅ Fully operational
 4. **All workflow files** exist and are properly configured
 5. **Documentation** updated in README.md with setup guide
 6. **Trigger mechanisms** correctly configured for all providers
@@ -178,10 +175,9 @@ All three provider workflows are now fully implemented:
 - Auto-review and on-demand modes
 - Commits Markdown/`docs/` updates only
 
-**✅ Cursor** - Fix & verification
-- Claude escalations resolved via Cursor AI action
-- Pytest + Bandit automation
-- Commits and reports implementation changes
+**✅ Cursor** - Verification pipeline
+- Executes pytest + Bandit on demand (no auto-generated code changes)
+- Posts verification summaries back to the PR
 
 ---
 
@@ -195,8 +191,8 @@ All three provider workflows are now fully implemented:
 
 2. **Test Cursor Workflow:**
    - Comment `@cursor verify` on a test PR
-   - Verify Cursor applies fixes/security changes as needed
-   - Confirm pytest and Bandit run successfully and that results are posted back
+   - Verify pytest and Bandit execute successfully
+   - Confirm the workflow posts a verification comment with the final status
 
 3. **Test Jules Workflow:**
    - Comment `@jules spec` on a test issue to generate specifications
