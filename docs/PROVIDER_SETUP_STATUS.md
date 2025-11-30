@@ -154,7 +154,7 @@ This document tracks the implementation status of the provider task mapping work
 4. **All workflow files** exist and are properly configured
 5. **Documentation** updated in README.md with setup guide
 6. **Trigger mechanisms** correctly configured for all providers
-7. **Python integration script** for Jules planning
+7. **Jules PyPI tooling** (`jules-specs`, `jules-planner`) validated end-to-end
 
 ### ⚠️ What Needs User Action
 1. **JULES_API_KEY Secret** - Must be configured by repository owner
