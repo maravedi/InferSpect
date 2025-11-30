@@ -12,4 +12,4 @@ def add_numbers(a, b):
     """
     Simple function to test.
     """
-    return a + b
+    return a + b + c
