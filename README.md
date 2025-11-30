@@ -14,16 +14,20 @@ This repository uses an AI-powered development workflow with three specialized p
 
 | Provider | Trigger Command | Best For |
 |----------|----------------|----------|
+| **Jules** | `@jules spec` | Requirements analysis, technical specifications |
 | **Jules** | `@jules plan` | System design, architecture planning |
 | **Claude** | `@claude` | Deep reasoning, code review, implementation |
 | **Cursor** | `@cursor verify` | Test runs, final validation |
 
 ### How It Works
 
-- **Jules (Planning)**: Comment `@jules plan` on an issue or PR to request system design and architecture planning.
-  - Uses Google Gemini 1.5 Pro for comprehensive architecture analysis
-  - Generates detailed implementation strategies, technology recommendations, and risk assessments
+- **Jules (Specifications & Planning)**:
+  - Comment `@jules spec` on an issue or PR to generate technical specifications and requirements analysis
+  - Comment `@jules plan` on an issue or PR to request system design and architecture planning
+  - Uses Google Gemini 1.5 Pro for comprehensive analysis
+  - Generates detailed specifications, implementation strategies, technology recommendations, and risk assessments
   - **Requires `JULES_API_KEY` secret** - See [setup guide](#jules-api-key-setup)
+  - Powered by [jules-specs](https://pypi.org/project/jules-specs/) and [jules-planner](https://pypi.org/project/jules-planner/) packages
 
 - **Claude (Review & Implementation)**:
   - **Auto-Review:** All Pull Requests are automatically reviewed by Claude upon opening or synchronization
@@ -55,7 +59,7 @@ To enable Jules architecture planning, you need to configure the `JULES_API_KEY`
 
 3. **Test the Integration:**
    - Create a test issue or PR
-   - Comment `@jules plan` to trigger Jules
-   - Jules will generate a comprehensive architecture plan
+   - Comment `@jules spec` to generate technical specifications
+   - Comment `@jules plan` to generate a comprehensive architecture plan
 
 **Note:** The Gemini API has usage limits. Check the [pricing page](https://ai.google.dev/pricing) for details.

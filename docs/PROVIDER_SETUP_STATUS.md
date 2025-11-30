@@ -8,7 +8,8 @@ This document tracks the implementation status of the provider task mapping work
 
 | Provider | Status | Trigger | Implementation | API Integration | Notes |
 |----------|--------|---------|----------------|-----------------|-------|
-| **Jules** | ✅ Fully Functional | `@jules plan` | Complete | ✅ Configured | Uses Gemini 1.5 Pro |
+| **Jules** | ✅ Fully Functional | `@jules spec` | Complete | ✅ Configured | Spec generation via jules-specs |
+| **Jules** | ✅ Fully Functional | `@jules plan` | Complete | ✅ Configured | Planning via jules-planner |
 | **Claude** | ✅ Fully Functional | `@claude` | Complete | ✅ Configured | Auto-review + on-demand |
 | **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | N/A (local tests) | Runs pytest suite |
 
@@ -16,35 +17,42 @@ This document tracks the implementation status of the provider task mapping work
 
 ## Detailed Status
 
-### 1. Jules (Architecture Planning) - ✅ FULLY FUNCTIONAL
+### 1. Jules (Specifications & Planning) - ✅ FULLY FUNCTIONAL
 
 **Workflow File:** `.github/workflows/jules_plan.yml`
-**Script:** `.github/scripts/jules_planner.py`
 
 **Current Status:** Fully functional and operational
 
 **What Works:**
-- ✅ Trigger detection (`@jules plan` in comments)
+- ✅ Trigger detection (`@jules spec` for specifications, `@jules plan` for planning)
+- ✅ Uses PyPI packages: [jules-specs](https://pypi.org/project/jules-specs/) and [jules-planner](https://pypi.org/project/jules-planner/)
 - ✅ Posts acknowledgment comment
 - ✅ Calls Google Gemini 1.5 Pro API
-- ✅ Generates comprehensive architecture plans
+- ✅ Generates comprehensive specifications and architecture plans
 - ✅ Posts formatted response to PR/issue
 - ✅ Error handling for API failures
 - ✅ Graceful handling of missing API key
 
 **API Integration:**
-- ✅ Uses Google Gemini API (rebranded as "Jules" for this project)
-- ✅ Comprehensive prompt engineering for architecture planning
+- ✅ Uses Google Gemini API via jules-specs and jules-planner packages
+- ✅ Comprehensive prompt engineering for spec and architecture planning
 - ✅ Extracts issue/PR context automatically
 - ✅ Posts formatted markdown responses
 
 **Features:**
-- Architecture overview and design recommendations
-- Technology stack suggestions with justifications
-- Phased implementation strategies
-- Security and performance considerations
-- Risk analysis and mitigation strategies
-- Detailed next steps and success criteria
+- **Spec Generation (`@jules spec`):**
+  - Technical requirements analysis
+  - Detailed specifications
+  - API contracts and interfaces
+  - Data models and schemas
+
+- **Architecture Planning (`@jules plan`):**
+  - Architecture overview and design recommendations
+  - Technology stack suggestions with justifications
+  - Phased implementation strategies
+  - Security and performance considerations
+  - Risk analysis and mitigation strategies
+  - Detailed next steps and success criteria
 
 **Setup Required:**
 - Configure `JULES_API_KEY` secret in GitHub repository settings
@@ -112,6 +120,7 @@ This document tracks the implementation status of the provider task mapping work
 ## Workflow Trigger Summary
 
 ### Issue Comments (Work on Both Issues & PRs)
+- `@jules spec` - Triggers Jules spec generation workflow
 - `@jules plan` - Triggers Jules planning workflow
 - `@cursor verify` - Triggers Cursor test verification (PR only)
 
@@ -158,8 +167,9 @@ This document tracks the implementation status of the provider task mapping work
 
 All three provider workflows are now fully implemented:
 
-**✅ Jules** - Gemini-powered architecture planning
-- Python script handles API communication
+**✅ Jules** - Gemini-powered spec and architecture planning
+- Uses jules-specs and jules-planner PyPI packages
+- Supports both `@jules spec` and `@jules plan` triggers
 - Comprehensive prompt engineering
 - Error handling and user feedback
 - Requires API key configuration
@@ -190,14 +200,19 @@ All three provider workflows are now fully implemented:
    - Verify results are posted back
 
 3. **Test Jules Workflow:**
-   - Comment `@jules plan` on a test issue
-   - Verify acknowledgment comment appears
-   - (Implementation required for actual planning)
+   - Comment `@jules spec` on a test issue to generate specifications
+   - Comment `@jules plan` on a test issue to generate architecture plan
+   - Verify generated specs/plans are posted as comments
 
 ---
 
 ## Recent Changes
 
+- **2025-11-30**: ✅ Integrated jules-specs and jules-planner PyPI packages
+- **2025-11-30**: ✅ Added `@jules spec` trigger for specification generation
+- **2025-11-30**: ✅ Updated workflow to support both spec and plan generation
+- **2025-11-30**: ✅ Updated README with both spec and plan capabilities
+- **2025-11-30**: ✅ Enhanced test scripts to validate both workflows
 - **2025-11-29**: ✅ Implemented full Jules API integration with Gemini 1.5 Pro
 - **2025-11-29**: ✅ Created `.github/scripts/jules_planner.py` for architecture planning
 - **2025-11-29**: ✅ Updated Jules workflow to call API instead of placeholder
@@ -233,5 +248,5 @@ All three provider workflows are now fully implemented:
 
 ---
 
-**Last Updated:** 2025-11-29
-**Status:** ✅ 3/3 providers fully functional (pending API key configuration)
+**Last Updated:** 2025-11-30
+**Status:** ✅ All providers fully functional (4 triggers: spec, plan, review, verify)
