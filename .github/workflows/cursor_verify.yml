@@ -47,7 +47,7 @@ jobs:
       - name: Install Cursor Review CLI
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install cursor-review==0.1.1
+          python3 -m pip install cursor-review
 
       - name: Collect PR metadata
         id: pr_meta
