@@ -10,7 +10,7 @@ The workflow has been updated to use the official `jules-planner` package from h
 - ✅ Replaced `.github/scripts/jules_planner.py` with `jules-planner` package
 - ✅ Simplified workflow by using the official package CLI
 - ✅ Added `contents: read` permission as required by documentation
-- ✅ Installs package from GitHub (until it's published to PyPI)
+- ✅ Installs package from PyPI (https://pypi.org/project/jules-planner/)
 
 ## Prerequisites
 
@@ -98,8 +98,8 @@ Check these sections in the workflow logs:
 - Install Jules GitHub app for this repository
 
 #### Error: "pip install failed"
-- **Solution**: Check if repository is accessible
-- Verify: https://github.com/maravedi/jules-actions is public
+- **Solution**: Check PyPI connectivity
+- Verify: https://pypi.org/project/jules-planner/ is accessible
 
 #### No workflow triggered
 - **Solution**: Check workflow file and permissions
