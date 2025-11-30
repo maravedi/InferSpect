@@ -1,14 +1,21 @@
 [tool.poetry]
-name = "sample-pr-project"
+name = "inferspect"
 version = "0.1.0"
-description = "A sample project to test workflows"
-authors = ["Jules <jules@example.com>"]
+description = "Automation scripts supporting the InferSpect workflows"
+authors = ["InferSpect Maintainers <opensource@inferspect.dev>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
+black = "^24.8.0"
+flake8 = "^7.1.0"
+isort = "^5.13.2"
+mypy = "^1.11.2"
+bandit = "^1.7.9"
 
 [build-system]
 requires = ["poetry-core"]
