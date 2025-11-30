@@ -21,6 +21,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Run Claude Code Action (auto-review)
         uses: anthropics/claude-code-action@v1
@@ -34,13 +36,19 @@ jobs:
             4. Provide a summary of your review and any changes made.
 
       - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "Claude Bot"
           git config --global user.email "claude-bot@users.noreply.github.com"
+
+          # Configure git to use the token for authentication
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
           git add .
           if ! git diff --staged --quiet; then
             git commit -m "docs: Update documentation based on Claude review"
-            # Push to the PR branch explicitly to handle detached HEAD or checkout nuances
+            # Push to the PR branch with explicit authentication
             git push origin HEAD:${{ github.head_ref }}
           else
             echo "No changes to commit."
@@ -57,6 +65,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Checkout PR Branch
         env:
@@ -76,9 +86,15 @@ jobs:
             - Focus on security, correctness, and clarity.
 
       - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "Claude Bot"
           git config --global user.email "claude-bot@users.noreply.github.com"
+
+          # Configure git to use the token for authentication
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
           git add .
           if ! git diff --staged --quiet; then
             git commit -m "refactor: Claude changes based on user comment"
