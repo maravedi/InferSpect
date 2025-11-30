@@ -73,7 +73,8 @@ This document tracks the implementation status of the provider task mapping work
 **Current Status:** Fully functional and operational
 
 **What Works:**
-- ✅ Auto-review on PR open/sync/reopen
+- ✅ Auto-review on non-draft PR open/sync/reopen/ready for review
+- ✅ Draft PRs are intentionally excluded from automatic reviews
 - ✅ On-demand review via `@claude` comment
 - ✅ Uses official `anthropics/claude-code-action@v1`
 - ✅ Updates Markdown/`docs/` content automatically
@@ -126,11 +127,11 @@ This document tracks the implementation status of the provider task mapping work
 - `@claude` - Triggers Claude review workflow
 
 ### Automatic Triggers
-- **Claude Auto-Review** - Runs automatically on:
-  - PR opened
-  - PR synchronized (new commits)
-  - PR reopened
-  - PR ready for review
+- **Claude Auto-Review** - Runs automatically on non-draft PRs when:
+  - PR opened (non-draft only)
+  - PR synchronized (new commits to non-draft PR)
+  - PR reopened (non-draft only)
+  - Draft PR marked as ready for review
 
 ---
 

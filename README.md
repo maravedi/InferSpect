@@ -30,9 +30,10 @@ This repository uses an AI-powered development workflow with three specialized p
   - Powered by [jules-specs](https://pypi.org/project/jules-specs/) and [jules-planner](https://pypi.org/project/jules-planner/) packages
 
 - **Claude (Documentation Refresh)**:
-  - **Auto-Review:** All Pull Requests are automatically reviewed by Claude upon opening or synchronization
+  - **Auto-Review:** Non-draft Pull Requests are automatically reviewed by Claude upon opening, synchronization, or when marked ready for review
   - **On-Demand:** Comment `@claude` in your Pull Request to request specific documentation updates
   - Claude keeps Markdown and planning docs current while flagging any issues for Cursor to address
+  - **Note:** Draft PRs are excluded from automatic reviews to avoid premature feedback
 
 - **Cursor (Fix & Verify)**: Comment `@cursor verify` on a PR to:
   - Run the Cursor fix workflow that applies bug fixes and security hardening
