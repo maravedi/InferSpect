@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Automation scripts supporting the InferSpect workflows"
 authors = ["InferSpect Maintainers <opensource@inferspect.dev>"]
 readme = "README.md"
+packages = [
+    { include = "inferspect", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
