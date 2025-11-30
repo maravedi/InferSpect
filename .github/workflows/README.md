@@ -5,7 +5,7 @@ This directory contains GitHub Actions workflows that provide AI-powered develop
 ## Available Workflows
 
 - **[Claude PR Review](#claude-pr-review)** - Documentation-only PR updates using Claude AI
-- **[Cursor Verify](#cursor-verify)** - Automated regression tests and security scans triggered via comments
+- **[Cursor Verify](#cursor-verify)** - Cursor Cloud GPT-5.1 agent review plus regression tests triggered via comments
 - **[Jules Spec & Plan](#jules-spec--plan)** - Architecture planning and specification generation using Google's Jules AI
 
 ---
@@ -87,10 +87,11 @@ Comment `@claude` on any pull request with specific instructions, and Claude wil
 
 ### Overview
 
-Responds to `@cursor verify` comments by running the automated regression tests and security scans on the PR branch. Cursor verification focuses on validation only—no code changes or documentation edits are made automatically.
+Responds to `@cursor verify` comments by launching the Cursor Cloud GPT-5.1 Codex agent for a whole-repo audit and then running the automated regression tests/security scans on the PR branch. Cursor verification focuses on evaluation—no code changes or documentation edits are made automatically.
 
 ### Features
 
+- **Cursor Cloud Agent Review**: Invokes GPT-5.1 Codex via Cursor Cloud, posts a Markdown report with prioritized findings, and links any agent-created PRs
 - **Automated Test Runs**: Executes `poetry run pytest` on the PR branch (including comment-triggered runs)
 - **Security Review**: Runs Bandit after dependency installation to flag common Python security issues
 - **Deterministic Environment**: Sets up Python 3.11, installs Poetry, and syncs project dependencies before verification
@@ -107,14 +108,17 @@ Comment `@cursor verify` on any pull request to run the Cursor verification pipe
 
 The workflow:
 1. Checks out the PR branch (handles both pull_request and issue_comment triggers)
-2. Installs Poetry plus project dependencies
-3. Executes `poetry run pytest`
-4. Scans the repository with Bandit
-5. Posts a status comment summarizing the outcome
+2. Launches the Cursor Cloud agent (if `CURSOR_CLOUD_API_KEY` is configured) and posts the Markdown report back to the PR
+3. Installs Poetry plus project dependencies
+4. Executes `poetry run pytest`
+5. Scans the repository with Bandit
+6. Posts a status comment summarizing the outcome
 
 ### Setup Instructions
 
-- No additional secrets are required beyond the default `GITHUB_TOKEN`
+- Requires `CURSOR_CLOUD_API_KEY` to enable the GPT-5.1 agent stage
+- (Optional) Set `CURSOR_CLOUD_BASE_URL` if you are targeting a private Cursor Cloud deployment
+- Uses the default `GITHUB_TOKEN` for checkout and comments
 
 ### Requirements
 

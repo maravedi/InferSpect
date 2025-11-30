@@ -11,7 +11,7 @@ This document tracks the implementation status of the provider task mapping work
 | **Jules** | ✅ Fully Functional | `@jules spec` | Complete | ✅ Configured | Spec generation via jules-specs |
 | **Jules** | ✅ Fully Functional | `@jules plan` | Complete | ✅ Configured | Planning via jules-planner |
 | **Claude** | ✅ Fully Functional | `@claude` | Complete | ✅ Configured | Docs-only auto-review |
-| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | N/A (local pipeline) | Tests + Bandit verification |
+| **Cursor** | ✅ Fully Functional | `@cursor verify` | Complete | ✅ Cursor Cloud | GPT-5.1 agent review + tests |
 
 ---
 
@@ -101,6 +101,7 @@ This document tracks the implementation status of the provider task mapping work
 **What Works:**
 - ✅ Triggers on `@cursor verify` comment
 - ✅ Checks out PR branch with write permissions
+- ✅ Launches Cursor Cloud GPT-5.1 Codex agent and posts a Markdown report
 - ✅ Sets up Python 3.11 environment
 - ✅ Installs Poetry dependency manager and project deps
 - ✅ Runs pytest test suite
@@ -109,7 +110,7 @@ This document tracks the implementation status of the provider task mapping work
 - ✅ Handles missing pyproject.toml gracefully
 
 **API Integration:**
-- ✅ Not required (local GitHub Actions pipeline only)
+- ✅ Uses Cursor Cloud API via `CURSOR_CLOUD_API_KEY`
 
 ---
 
@@ -138,6 +139,7 @@ This document tracks the implementation status of the provider task mapping work
 |--------|--------|---------|---------|
 | `JULES_API_KEY` | ❌ Not Set | Jules workflow | Jules AI API authentication |
 | `ANTHROPIC_API_KEY` | ✅ Set | Claude workflow | Anthropic API authentication |
+| `CURSOR_CLOUD_API_KEY` | ⚠️ Configure | Cursor workflow | Cursor Cloud GPT-5.1 agent authentication |
 | `GITHUB_TOKEN` | ✅ Auto-provided | All workflows | GitHub API access |
 
 ---
@@ -176,8 +178,9 @@ All three provider workflows are now fully implemented:
 - Commits Markdown/`docs/` updates only
 
 **✅ Cursor** - Verification pipeline
+- Launches Cursor Cloud GPT-5.1 Codex for every `@cursor verify`
 - Executes pytest + Bandit on demand (no auto-generated code changes)
-- Posts verification summaries back to the PR
+- Posts agent findings and verification summaries back to the PR
 
 ---
 
@@ -191,8 +194,9 @@ All three provider workflows are now fully implemented:
 
 2. **Test Cursor Workflow:**
    - Comment `@cursor verify` on a test PR
-   - Verify pytest and Bandit execute successfully
-   - Confirm the workflow posts a verification comment with the final status
+   - Verify the Cursor Cloud agent report appears in the PR conversation
+   - Confirm pytest and Bandit execute successfully
+   - Ensure the workflow posts the final verification status comment
 
 3. **Test Jules Workflow:**
    - Comment `@jules spec` on a test issue to generate specifications

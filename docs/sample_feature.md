@@ -8,7 +8,7 @@ This document describes the sample feature implemented in `sample_code.py`.
 
 This sample code serves as a test fixture to verify that:
 - The Claude documentation review workflow correctly identifies and documents security issues
-- The Cursor verification workflow detects and reports security vulnerabilities
+- The Cursor verification workflow invokes the Cursor Cloud GPT-5.1 Codex agent to detect and report security vulnerabilities
 - Security scanning tools (e.g., Bandit) properly flag dangerous code patterns
 
 ## Functions
@@ -64,7 +64,7 @@ To test the workflow integration:
 
 1. **Create a Pull Request** containing this code
 2. **Verify Claude Review:** Claude should automatically identify and document the security vulnerability in `process_user_input`
-3. **Trigger Cursor Verification:** Comment `@cursor verify` on the PR to run the automated tests and security scan
+3. **Trigger Cursor Verification:** Comment `@cursor verify` on the PR to launch the Cursor Cloud agent review followed by the automated tests and security scan
 4. **Verify Bandit Detection:** The workflow should run `bandit` and report the command injection vulnerability
 
 ## Expected Security Scan Results
