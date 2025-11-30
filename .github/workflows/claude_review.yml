@@ -32,19 +32,19 @@ jobs:
           git config --global user.email "claude-bot@users.noreply.github.com"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 
-      - name: Run Claude Code Action (auto-review)
+      - name: Run Claude Code Action (documentation pass)
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            You are an expert reviewer. Review the changes in this Pull Request.
-            1. Analyze the code changes for bugs, security vulnerabilities, and code quality.
-            2. CRITICAL: Check if any documentation (README.md, IMPLEMENTATION_PLAN.md, inline docs) is outdated due to these changes.
-            3. If documentation is outdated, UPDATE the files to reflect the new changes.
-            4. Provide a summary of your review and any changes made.
+            You are the documentation-focused Claude reviewer.
+            - Read the diff to understand the intent of the code changes but DO NOT modify source code, configuration, or tests.
+            - Update only documentation assets (Markdown, docs/, *.mdx) so they stay accurate with the latest implementation details.
+            - If you discover code bugs or security issues, summarize them in review comments and clearly request that `@cursor verify` be invoked to fix them.
+            - Provide a concise summary of the documentation updates you made.
 
-      - name: Commit and Push Changes
+      - name: Commit and Push Documentation Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -53,14 +53,33 @@ jobs:
 
           # Configure git to use the token for authentication
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          CHANGED_FILES="$(git status --porcelain)"
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changes detected."
+            exit 0
+          fi
 
-          git add .
+          ALLOWED_REGEX='(\.md$|\.mdx$|\.rst$|^docs/)'
+          NON_DOC_FILES="$(echo "$CHANGED_FILES" | awk '{print $2}' | grep -Ev "$ALLOWED_REGEX" || true)"
+          if [ -n "$NON_DOC_FILES" ]; then
+            echo "Non-documentation changes detected:"
+            echo "$NON_DOC_FILES"
+            echo "Refusing to commit so Cursor can handle code changes."
+            exit 1
+          fi
+
+          DOC_FILES="$(echo "$CHANGED_FILES" | awk '{print $2}' | grep -E "$ALLOWED_REGEX" | sort -u)"
+          if [ -z "$DOC_FILES" ]; then
+            echo "No documentation files to commit."
+            exit 0
+          fi
+
+          echo "$DOC_FILES" | xargs git add
           if ! git diff --staged --quiet; then
-            git commit -m "docs: Update documentation based on Claude review"
-            # Push to the PR branch with explicit authentication
+            git commit -m "docs: sync documentation with PR changes"
             git push origin HEAD:${{ github.head_ref }}
           else
-            echo "No changes to commit."
+            echo "No documentation changes to commit."
           fi
 
   comment_review:
@@ -91,19 +110,19 @@ jobs:
           git config --global user.email "claude-bot@users.noreply.github.com"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 
-      - name: Run Claude Code Action (comment-triggered)
+      - name: Run Claude Code Action (comment-triggered docs)
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            You are reviewing a GitHub pull request based on a user request.
-            - Address the user's comment specifically.
-            - If the user asks for code changes or documentation updates, IMPLEMENT them.
-            - Always ensure documentation stays up-to-date with code changes.
-            - Focus on security, correctness, and clarity.
+            You are responding as the documentation-only Claude reviewer.
+            - Fulfill the user's request only if it requires documentation updates (Markdown, docs/, *.mdx).
+            - Do NOT modify application code, configuration, or tests.
+            - If the request involves bug fixes or security work, leave review comments explaining the findings and instruct the author to mention `@cursor verify` for implementation help.
+            - Summarize the documentation adjustments you perform.
 
-      - name: Commit and Push Changes
+      - name: Commit and Push Documentation Changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -112,11 +131,31 @@ jobs:
 
           # Configure git to use the token for authentication
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          CHANGED_FILES="$(git status --porcelain)"
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changes detected."
+            exit 0
+          fi
 
-          git add .
+          ALLOWED_REGEX='(\.md$|\.mdx$|\.rst$|^docs/)'
+          NON_DOC_FILES="$(echo "$CHANGED_FILES" | awk '{print $2}' | grep -Ev "$ALLOWED_REGEX" || true)"
+          if [ -n "$NON_DOC_FILES" ]; then
+            echo "Non-documentation changes detected:"
+            echo "$NON_DOC_FILES"
+            echo "Refusing to commit so Cursor can handle code changes."
+            exit 1
+          fi
+
+          DOC_FILES="$(echo "$CHANGED_FILES" | awk '{print $2}' | grep -E "$ALLOWED_REGEX" | sort -u)"
+          if [ -z "$DOC_FILES" ]; then
+            echo "No documentation files to commit."
+            exit 0
+          fi
+
+          echo "$DOC_FILES" | xargs git add
           if ! git diff --staged --quiet; then
-            git commit -m "refactor: Claude changes based on user comment"
+            git commit -m "docs: documentation updates from Claude request"
             git push
           else
-            echo "No changes to commit."
+            echo "No documentation changes to commit."
           fi

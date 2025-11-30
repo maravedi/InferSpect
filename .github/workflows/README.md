@@ -4,8 +4,8 @@ This directory contains GitHub Actions workflows that provide AI-powered develop
 
 ## Available Workflows
 
-- **[Claude PR Review](#claude-pr-review)** - Automated PR reviews and documentation updates using Claude AI
-- **[Cursor Verify](#cursor-verify)** - Test verification triggered via comments
+- **[Claude PR Review](#claude-pr-review)** - Documentation-only PR updates using Claude AI
+- **[Cursor Fix & Verify](#cursor-fix--verify)** - Implementation fixes, security review, and verification triggered via comments
 - **[Jules Spec & Plan](#jules-spec--plan)** - Architecture planning and specification generation using Google's Jules AI
 
 ---
@@ -16,14 +16,14 @@ This directory contains GitHub Actions workflows that provide AI-powered develop
 
 ### Overview
 
-This workflow uses Anthropic's Claude AI to automatically review pull requests, check code quality and security, and ensure documentation stays up-to-date with code changes.
+This workflow uses Anthropic's Claude AI to automatically review pull requests for documentation accuracy. Claude now focuses solely on keeping written assets aligned with the latest code changes while deferring bug fixes and security work to Cursor.
 
 ### Features
 
-- **Automatic PR Reviews**: Analyzes code changes when PRs are opened, updated, or reopened
-- **Security Analysis**: Checks for bugs and security vulnerabilities
-- **Documentation Updates**: Automatically updates outdated documentation to match code changes
-- **On-Demand Reviews**: Comment `@claude` on any PR to trigger a custom review
+- **Automatic PR Documentation Pass**: Runs when PRs are opened, updated, reopened, or marked ready
+- **Docs-Only Commits**: Updates Markdown and `docs/` files without touching application code
+- **Bug/Security Escalation**: Leaves review comments directing maintainers to run `@cursor verify` for implementation fixes
+- **On-Demand Doc Refresh**: Comment `@claude` on any PR to request targeted documentation updates
 
 ### How to Use
 
@@ -38,9 +38,9 @@ The workflow automatically runs when you:
 #### Comment-Triggered Review
 
 Comment `@claude` on any pull request with specific instructions, and Claude will:
-- Address your specific request
-- Implement code changes or documentation updates as needed
-- Focus on security, correctness, and clarity
+- Address your documentation-specific request
+- Update Markdown and `docs/` artifacts while leaving code changes to Cursor
+- Highlight any blocking bugs or security issues so Cursor can follow up
 
 **Example:**
 ```
@@ -64,10 +64,10 @@ Comment `@claude` on any pull request with specific instructions, and Claude wil
 
 ### What Claude Reviews
 
-1. **Code Quality**: Checks for bugs, anti-patterns, and code smells
-2. **Security**: Identifies potential security vulnerabilities
-3. **Documentation**: Ensures README.md, implementation plans, and inline docs are current
-4. **Best Practices**: Suggests improvements following industry standards
+1. **Documentation Accuracy**: Ensures README.md, implementation plans, and other Markdown stay aligned
+2. **Context Awareness**: Reads code changes to understand behavior without modifying code
+3. **Issue Escalation**: Flags bugs/security gaps via comments so Cursor can take action
+4. **Communication**: Summarizes doc updates and outstanding implementation follow-ups
 
 ### Technical Details
 
@@ -78,39 +78,45 @@ Comment `@claude` on any pull request with specific instructions, and Claude wil
 
 ---
 
-## Cursor Verify
+## Cursor Fix & Verify
 
 **Workflow File:** `.github/workflows/cursor_verify.yml`
 
 ### Overview
 
-A lightweight testing workflow that runs your project's test suite on demand via PR comments. Perfect for verifying changes before merging.
+Responds to `@cursor verify` comments by having Cursor apply implementation fixes, perform a security review, and run the automated test suite. Cursor now owns code changes while Claude focuses on documentation.
 
 ### Features
 
-- **On-Demand Testing**: Trigger tests by commenting on a PR
-- **Poetry Support**: Automatically installs dependencies using Poetry
-- **Status Reporting**: Posts test results back to the PR as a comment
+- **Implementation Ownership**: Cursor applies bug fixes and security hardening directly to the PR branch
+- **Security Review**: Executes Bandit after AI modifications to catch common vulnerabilities
+- **Test Verification**: Runs `poetry run pytest` to validate the updated code
+- **Scoped Doc Sweep**: If code files change, Cursor performs a constrained documentation update for the affected areas
+- **Automated Commits & Reporting**: Pushes Cursor changes and posts an execution summary back to the PR
 
 ### How to Use
 
-Comment `@cursor verify` on any pull request to run the test suite.
+Comment `@cursor verify` on any pull request to run the full Cursor fix-and-verify pipeline.
 
 **Example:**
 ```
 @cursor verify
 ```
 
-The workflow will:
-1. Check out the PR branch
-2. Set up Python 3.11
-3. Install Poetry and dependencies
-4. Run pytest
-5. Report the results in a comment
+The workflow:
+1. Checks out the PR branch with write permissions
+2. Runs the Cursor AI action tuned for bug fixes and security remediation
+3. Installs Poetry plus project dependencies
+4. Executes pytest
+5. Scans the repository with Bandit
+6. Detects whether non-documentation files were changed and, if so, runs a docs-only sweep scoped to those paths
+7. Commits/pushes resulting code and documentation changes
+8. Posts a status comment summarizing the outcome
 
 ### Setup Instructions
 
-No additional setup required! This workflow uses the default `GITHUB_TOKEN` and works out of the box.
+- Requires the shared `ANTHROPIC_API_KEY` secret (same as Claude)
+- Uses the default `GITHUB_TOKEN` for checkout and pushes
 
 ### Requirements
 
@@ -120,9 +126,9 @@ No additional setup required! This workflow uses the default `GITHUB_TOKEN` and 
 
 ### Technical Details
 
-- Triggered only via issue comments containing `@cursor verify`
-- Uses Python 3.11
-- Installs Poetry from official installer
+- Triggered via issue comments containing `@cursor verify`
+- Uses `anthropics/claude-code-action@v1` with a Cursor-specific prompt
+- Installs Poetry from the official installer
 - Reports status regardless of test outcome (`if: always()`)
 
 ---
@@ -239,19 +245,20 @@ This allows Jules to generate comprehensive outputs and even create pull request
 
 ---
 
-### Cursor Verify
+### Cursor Fix & Verify
 
-#### Tests Not Running
+#### Workflow Fails Before Tests
 **Possible causes:**
-- No `pyproject.toml` file in the repository
-- Tests are not configured in Poetry
+- Missing `ANTHROPIC_API_KEY` secret (shared with Claude)
+- `@cursor verify` comment issued on an issue (workflow requires a PR)
+- Cursor action could not apply code changes cleanly
 
-**Fix:** Ensure your project has a `pyproject.toml` with test dependencies and pytest configured.
+**Fix:** Confirm the secret is configured, ensure the comment is on a PR, and inspect workflow logs for merge conflicts.
 
-#### Python Version Issues
-**Cause:** Tests require a different Python version.
+#### Tests or Bandit Fail
+**Cause:** Cursor changes introduced failing tests or security findings.
 
-**Fix:** Update the workflow file to use your required Python version (currently set to 3.11).
+**Fix:** Review the workflow logs, address the reported failures locally, and re-run `@cursor verify`.
 
 ---
 
@@ -294,7 +301,7 @@ This allows Jules to generate comprehensive outputs and even create pull request
 ### Workflow Permissions
 All workflows run with minimal required permissions:
 - **Claude PR Review**: Can write to contents and PRs to commit documentation updates
-- **Cursor Verify**: Uses default GITHUB_TOKEN with read access
+- **Cursor Fix & Verify**: Requires contents/pull-request write access to push implementation fixes
 - **Jules Spec & Plan**: Can write to issues/PRs but only reads repository contents
 
 ---
